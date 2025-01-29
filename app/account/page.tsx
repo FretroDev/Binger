@@ -1,14 +1,17 @@
-"use client"
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "@/components/ui/use-toast"
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,98 +22,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import { LogOut, Trash2, UserCircle } from "lucide-react"
+} from "@/components/ui/alert-dialog";
+import { LogOut, Trash2, UserCircle } from "lucide-react";
 
-export default function AccountPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [isPublic, setIsPublic] = useState(false)
-  const [userData, setUserData] = useState<any>(null)
+import { handleLogout, handlePrivacyToggle } from './actions'
 
-  // Fetch user data on component mount
-  useState(() => {
-    const fetchUserData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUserData(user)
-    }
-    fetchUserData()
-  }, [])
+export default async function AccountPage() {
 
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data?.user) {
+    redirect("/login");
+  }
+
+  const userData = data.user;
+  console.log
+  const isPublic = false
   const handleLogout = async () => {
-    try {
-      setLoading(true)
-      await supabase.auth.signOut()
-      toast({
-        title: "Logged out successfully",
-        description: "You have been logged out of your account.",
-      })
-      router.push("/login")
-    } catch (error) {
-      console.error("Error logging out:", error)
-      toast({
-        title: "Error",
-        description: "An error occurred while logging out. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
+    await supabase.auth.signOut();
+  };
 
-  const handleDeleteAccount = async () => {
-    try {
-      setLoading(true)
-      // Delete user data from your tables first
-      const userId = userData?.id
-      await supabase.from('user_data').delete().match({ user_id: userId })
-      
-      // Then delete the auth account
-      await supabase.auth.admin.deleteUser(userId)
-      
-      toast({
-        title: "Account deleted",
-        description: "Your account and all associated data have been deleted.",
-      })
-      router.push("/login")
-    } catch (error) {
-      console.error("Error deleting account:", error)
-      toast({
-        title: "Error",
-        description: "An error occurred while deleting your account. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePrivacyToggle = async () => {
-    try {
-      setLoading(true)
-      await supabase
-        .from('user_settings')
-        .upsert({ 
-          user_id: userData?.id, 
-          is_public: !isPublic 
-        })
-      
-      setIsPublic(!isPublic)
-      toast({
-        title: "Settings updated",
-        description: `Your profile is now ${!isPublic ? "public" : "private"}.`,
-      })
-    } catch (error) {
-      console.error("Error updating privacy settings:", error)
-      toast({
-        title: "Error",
-        description: "An error occurred while updating your settings. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
@@ -124,9 +56,8 @@ export default function AccountPage() {
             Manage your account preferences and Discord connection
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="space-y-6">
-          {/* Discord Profile Info */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Discord Profile</h3>
             <div className="flex items-center space-x-4">
@@ -136,7 +67,9 @@ export default function AccountPage() {
                 className="h-16 w-16 rounded-full"
               />
               <div>
-                <p className="font-medium">{userData?.user_metadata?.full_name}</p>
+                <p className="font-medium">
+                  {userData?.user_metadata?.full_name}
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {userData?.user_metadata?.email}
                 </p>
@@ -161,9 +94,8 @@ export default function AccountPage() {
               </div>
               <Switch
                 id="public-profile"
-                checked={isPublic}
-                onCheckedChange={handlePrivacyToggle}
-                disabled={loading}
+                value={isPublic}
+                formAction={handlePrivacyToggle}
               />
             </div>
           </div>
@@ -172,13 +104,14 @@ export default function AccountPage() {
 
           {/* Danger Zone */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-destructive">Danger Zone</h3>
+            <h3 className="text-lg font-semibold text-destructive">
+              Danger Zone
+            </h3>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
                 variant="outline"
                 className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                onClick={handleLogout}
-                disabled={loading}
+                formAction={handleLogout}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Log Out
@@ -186,26 +119,25 @@ export default function AccountPage() {
 
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    disabled={loading}
-                  >
+                  <Button variant="destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete Account
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete your
-                      account and remove all of your data from our servers.
+                      This action cannot be undone. This will permanently delete
+                      your account and remove all of your data from our servers.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      onClick={handleDeleteAccount}
+                      formAction={handleLogout}
                       className="bg-destructive hover:bg-destructive/90"
                     >
                       Delete Account
@@ -218,5 +150,5 @@ export default function AccountPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

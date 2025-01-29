@@ -8,7 +8,7 @@ interface StatsProps {
   media: Media[]
 }
 
-const CountUp = ({ end, duration = 2 }) => {
+const CountUp = ({ end, duration = 2 }: { end: number; duration?: number }) => {
   const [count, setCount] = useState(0)
 
   useEffect(() => {

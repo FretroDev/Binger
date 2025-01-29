@@ -117,7 +117,7 @@ export function MediaSheet({ media, onClose, onDelete, onUpdate }: MediaSheetPro
           <div className="flex items-center">
             <Star className="w-4 h-4 text-yellow-500 fill-current mr-1" />
             <span className="font-medium">{rating.toFixed(1)}</span>
-            <span className="text-sm text-muted-foreground ml-1">Your rating</span>
+            <span className="text-sm text-muted-foreground ml-1">Your Rating</span>
           </div>
         )}
         {/* Always show TMDB rating if available */}
