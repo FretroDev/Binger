@@ -8,7 +8,7 @@ interface StatsProps {
   media: Media[]
 }
 
-const CountUp = ({ end, duration = 2 }: { end: number; duration?: number }) => {
+const CountUp = ({ end, duration = 2 }) => {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
@@ -28,12 +28,36 @@ const CountUp = ({ end, duration = 2 }: { end: number; duration?: number }) => {
 }
 
 export function Stats({ media }: StatsProps) {
-  const watchedMedia = media.filter((item) => item.category === "Watched")
-  const totalMinutes = watchedMedia.reduce((acc, item) => acc + (item.customDuration || item.runtime), 0)
-  const totalShows = watchedMedia.filter((item) => item.type === "tv").length
-  const totalMovies = watchedMedia.filter((item) => item.type === "movie").length
+  const [totalWatchTime, setTotalWatchTime] = useState(0)
 
-  const hours = Math.floor(totalMinutes / 60)
+  useEffect(() => {
+    const calculateTotalMinutes = (mediaList: Media[]) => {
+      return mediaList.reduce((acc, item) => {
+        if (item.type === "movie") {
+          return acc + (item.customDuration || item.runtime)
+        } else if (item.type === "tv") {
+          if (item.customDuration) {
+            return acc + item.customDuration
+          } else if (item.seasons && item.episodesPerSeason && item.episodeDuration) {
+            const watchedSeasons = item.category === "Streaming" ? item.watchedSeasons || 0 : item.seasons
+            return acc + watchedSeasons * item.episodesPerSeason * item.episodeDuration
+          }
+        }
+        return acc
+      }, 0)
+    }
+
+    const watchedMedia = media.filter((item) => item.category === "Watched")
+    const streamingMedia = media.filter((item) => item.category === "Streaming")
+    const newTotalWatchTime = calculateTotalMinutes(watchedMedia) + calculateTotalMinutes(streamingMedia)
+
+    setTotalWatchTime(newTotalWatchTime)
+  }, [media])
+
+  const totalShows = media.filter((item) => item.type === "tv" && item.category !== "Wishlist").length
+  const totalMovies = media.filter((item) => item.type === "movie" && item.category !== "Wishlist").length
+
+  const hours = Math.floor(totalWatchTime / 60)
   const days = Math.floor(hours / 24)
 
   const controls = useAnimation()
@@ -64,7 +88,7 @@ export function Stats({ media }: StatsProps) {
               <CountUp end={days} /> days
             </div>
             <p className="text-xs text-muted-foreground">
-              <CountUp end={hours} /> hours (<CountUp end={totalMinutes} /> minutes)
+              <CountUp end={hours} /> hours (<CountUp end={totalWatchTime} /> minutes)
             </p>
           </CardContent>
         </Card>
@@ -79,7 +103,7 @@ export function Stats({ media }: StatsProps) {
             <div className="text-2xl font-bold">
               <CountUp end={totalShows} />
             </div>
-            <p className="text-xs text-muted-foreground">Watched shows</p>
+            <p className="text-xs text-muted-foreground">Watched/Streaming shows</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -93,7 +117,7 @@ export function Stats({ media }: StatsProps) {
             <div className="text-2xl font-bold">
               <CountUp end={totalMovies} />
             </div>
-            <p className="text-xs text-muted-foreground">Watched movies</p>
+            <p className="text-xs text-muted-foreground">Watched/Streaming movies</p>
           </CardContent>
         </Card>
       </motion.div>

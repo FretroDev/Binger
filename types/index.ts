@@ -4,6 +4,7 @@ export type Media = {
   title: string
   type: "movie" | "tv"
   posterPath: string
+  backdropPath: string
   rating: number
   tmdbRating: number
   watchedAt: Date
@@ -25,6 +26,7 @@ export type TMDBSearchResult = {
   title?: string
   name?: string
   poster_path: string
+  backdrop_path: string
   media_type: "movie" | "tv"
   first_air_date?: string
   release_date?: string
@@ -33,12 +35,11 @@ export type TMDBSearchResult = {
 }
 
 export type TMDBDetails = {
-  first_air_date: string | undefined
-  release_date: string | undefined
   id: number
   title?: string
   name?: string
   poster_path: string
+  backdrop_path: string
   runtime?: number
   episode_run_time?: number[]
   number_of_seasons?: number

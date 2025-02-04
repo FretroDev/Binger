@@ -2,42 +2,50 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
 import { createClient } from "@/lib/supabase/server";
 
-export async function handleLogout(formData: FormData) {
+export const handleLogout = async () => {
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    redirect("/error");
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    redirect("/login");
   }
 
-  revalidatePath("/", "layout");
+  await supabase.auth.signOut();
+  revalidatePath("/");
   redirect("/");
-}
+};
 
-export const handlePrivacyToggle = async () => {
+export const handlePrivacyToggle = async (is_public: boolean) => {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    redirect("/login");
+  }
 
-  const { data: userSettings } = await supabase
-    .from("user_settings")
-    .select("is_public")
-    .eq("id", user.id)
-    .single();
-
-  if (!userSettings) return;
   await supabase.from("user_settings").upsert({
-    id: user.id,
-    is_public: !userSettings.is_public,
+    id: data.user.id,
+    is_public: is_public,
   });
 
-  revalidatePath("/account", "layout");
-  redirect("/account");
+  if (error) {
+    console.error("Failed to update privacy settings", error);
+  }
+  revalidatePath("/account");
+};
+
+export const handleAccountDeletion = async () => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    redirect("/login");
+  }
+
+  await supabase.auth.admin.deleteUser(data.user.id);
+
+  revalidatePath("/");
+  redirect("/");
 };

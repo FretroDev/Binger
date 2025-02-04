@@ -9,6 +9,7 @@ import { Stats } from "@/components/stats"
 import { MediaCard } from "@/components/media-card"
 import { AddMediaDialog } from "@/components/add-media-dialog"
 import { MediaSheet } from "@/components/media-sheet"
+import { MediaReorganizer } from "@/components/media-reorganizer"
 import { getTMDBDetails, searchTMDB } from "@/lib/tmdb"
 import { getStoredMedia, storeMedia } from "@/lib/storage"
 import type { Media } from "@/types"
@@ -36,7 +37,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { PlusCircleIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd"
 import { ImportDialog } from "@/components/import-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -71,6 +71,7 @@ export default function Home() {
   const [showImportDialog, setShowImportDialog] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState<string>("All")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isReorganizerOpen, setIsReorganizerOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -144,9 +145,29 @@ export default function Home() {
     category: "Watched" | "Wishlist" | "Streaming",
     note?: string,
     customDuration?: number,
+    seasons?: number,
+    episodesPerSeason?: number,
+    episodeDuration?: number,
+    completedSeasons?: number,
   ) {
     try {
+      // Check if the media already exists in the library
+      const existingMedia = media.find((item) => item.tmdbId === tmdbId && item.type === type)
+      if (existingMedia) {
+        toast({
+          title: "Media already exists",
+          description: `${existingMedia.title} is already in your library.`,
+          variant: "destructive",
+        })
+        return
+      }
+
       const details = await getTMDBDetails(tmdbId, type)
+
+      let duration = customDuration
+      if (type === "tv" && !customDuration && seasons && episodesPerSeason && episodeDuration) {
+        duration = seasons * episodesPerSeason * episodeDuration
+      }
 
       const newMedia: Media = {
         id: Math.random().toString(36).substring(7),
@@ -157,16 +178,15 @@ export default function Home() {
         rating,
         tmdbRating: details.vote_average,
         watchedAt: new Date(),
-        runtime:
-          type === "movie"
-            ? details.runtime || 0
-            : (details.episode_run_time?.[0] || 0) * (details.number_of_seasons || 0),
-        customDuration,
+        runtime: type === "movie" ? details.runtime || 0 : 0,
+        customDuration: duration,
         note,
         overview: details.overview,
         category,
-        watchedSeasons: category === "Streaming" && type === "tv" ? 0 : undefined,
-        seasons: type === "tv" ? details.number_of_seasons : undefined,
+        watchedSeasons: category === "Streaming" && type === "tv" ? completedSeasons : undefined,
+        seasons: type === "tv" ? seasons : undefined,
+        episodesPerSeason: type === "tv" ? episodesPerSeason : undefined,
+        episodeDuration: type === "tv" ? episodeDuration : undefined,
         release_date: details.release_date,
         first_air_date: details.first_air_date,
       }
@@ -193,31 +213,6 @@ export default function Home() {
     }
   }
 
-  async function handleDeleteMedia(id: string) {
-    try {
-      if (isSupabaseReady && session) {
-        const { error } = await supabase!.from("media").delete().eq("id", id)
-        if (error) throw error
-      }
-
-      const updatedMedia = media.filter((item) => item.id !== id)
-      setMedia(updatedMedia)
-      if (!isSupabaseReady || !session) storeMedia(updatedMedia)
-      setSelectedMedia(null)
-      toast({
-        title: "Success",
-        description: "Media deleted from your library.",
-      })
-    } catch (error) {
-      console.error("Error deleting media:", error)
-      toast({
-        title: "Error",
-        description: "Failed to delete media. Please try again.",
-        variant: "destructive",
-      })
-    }
-  }
-
   async function handleUpdateMedia(
     id: string,
     note: string,
@@ -225,18 +220,26 @@ export default function Home() {
     rating: number,
     category: "Watched" | "Wishlist" | "Streaming",
     watchedSeasons?: number,
+    seasons?: number,
+    episodesPerSeason?: number,
+    episodeDuration?: number,
   ) {
     try {
       const updatedMedia = media.map((item) => {
         if (item.id === id) {
-          return {
+          const updatedItem = {
             ...item,
             note,
-            customDuration: duration || item.runtime,
+            customDuration: duration !== item.runtime ? duration : undefined,
             rating,
             category,
             watchedSeasons: category === "Streaming" && item.type === "tv" ? watchedSeasons : undefined,
+            seasons,
+            episodesPerSeason,
+            episodeDuration,
           }
+
+          return updatedItem
         }
         return item
       })
@@ -246,17 +249,20 @@ export default function Home() {
           .from("media")
           .update({
             note,
-            customDuration: duration || undefined,
+            customDuration: duration !== updatedMedia.find((m) => m.id === id)?.runtime ? duration : null,
             rating,
             category,
-            watchedSeasons: category === "Streaming" ? watchedSeasons : undefined,
+            watchedSeasons: category === "Streaming" ? watchedSeasons : null,
+            seasons,
+            episodesPerSeason,
+            episodeDuration,
           })
           .eq("id", id)
         if (error) throw error
       }
 
       setMedia(updatedMedia)
-      if (!isSupabaseReady || !session) storeMedia(updatedMedia)
+      storeMedia(updatedMedia)
       setSelectedMedia(updatedMedia.find((item) => item.id === id) || null)
       toast({
         title: "Success",
@@ -272,13 +278,43 @@ export default function Home() {
     }
   }
 
+  async function handleDeleteMedia(id: string) {
+    try {
+      // Remove the media item from the local state
+      const updatedMedia = media.filter((item) => item.id !== id)
+      setMedia(updatedMedia)
+
+      // If Supabase is configured and the user is logged in, delete from the database
+      if (isSupabaseReady && session) {
+        const { error } = await supabase!.from("media").delete().eq("id", id)
+        if (error) throw error
+      } else {
+        // If not using Supabase, update the local storage
+        storeMedia(updatedMedia)
+      }
+
+      setSelectedMedia(null)
+      toast({
+        title: "Success",
+        description: "Media deleted from your library.",
+      })
+    } catch (error) {
+      console.error("Error deleting media:", error)
+      toast({
+        title: "Error",
+        description: "Failed to delete media. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
   const filterOptions = [
     { name: "TMDB Rating", key: "tmdbRating", options: ["Top Rated", "Lowest Rated"] },
     { name: "Your Rating", key: "userRating", options: ["Top Rated", "Lowest Rated"] },
     { name: "Date Added", key: "dateAdded", options: ["Latest", "Oldest"] },
   ]
 
-  function applyFilters(newFilters:any) {
+  function applyFilters(newFilters) {
     setActiveFilters(newFilters)
     const filtered = [...media]
 
@@ -313,7 +349,7 @@ export default function Home() {
     setFilteredMedia([])
   }
 
-  function onDragEnd(result:any) {
+  function onDragEnd(result) {
     if (!result.destination) return
 
     const items = Array.from(media)
@@ -379,6 +415,22 @@ export default function Home() {
     return mediaToFilter.filter((item) => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
   }
 
+  const handleSaveReorganizedMedia = (newOrder: Media[]) => {
+    setMedia(newOrder)
+    if (isSupabaseReady && session) {
+      // Update the order in Supabase
+      newOrder.forEach((item, index) => {
+        supabase!.from("media").update({ order: index }).eq("id", item.id)
+      })
+    } else {
+      storeMedia(newOrder)
+    }
+    toast({
+      title: "Success",
+      description: "Media order updated successfully.",
+    })
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
@@ -432,10 +484,9 @@ export default function Home() {
             )}
 
             <Stats media={media} />
-
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4 w-full sm:w-auto">
-              <h2 className="text-2xl font-bold">Collection</h2>
+                <h2 className="text-2xl font-bold">Collection</h2>
                 <Input
                   type="text"
                   placeholder="Search media..."
@@ -494,9 +545,9 @@ export default function Home() {
                         <DropdownMenuItem onSelect={clearFilters}>Clear Filters</DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuSub>
-                    <DropdownMenuItem onSelect={() => setIsReorganizing(!isReorganizing)}>
+                    <DropdownMenuItem onSelect={() => setIsReorganizerOpen(true)}>
                       <ArrowUpDown className="mr-2 h-4 w-4" />
-                      <span>{isReorganizing ? "Save Order" : "Re-Organize"}</span>
+                      <span>Re-Organize</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => setShowImportDialog(true)}>
                       <FileJson className="mr-2 h-4 w-4" />
@@ -518,44 +569,15 @@ export default function Home() {
                 {media.length === 0 ? (
                   <EmptyMediaState />
                 ) : (
-                  <DragDropContext onDragEnd={onDragEnd}>
-                    <Droppable droppableId="media-list">
-                      {(provided:any) => (
-                        <div
-                          {...provided.droppableProps}
-                          ref={provided.innerRef}
-                          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
-                        >
-                          <AnimatePresence>
-                            {(filteredMedia.length > 0
-                              ? filteredMediaBySearch(filteredMedia)
-                              : filteredMediaBySearch(media)
-                            )
-                              .filter((item) => selectedCategory === "All" || item.category === selectedCategory)
-                              .map((item, index) => (
-                                <Draggable
-                                  key={item.id}
-                                  draggableId={item.id}
-                                  index={index}
-                                  isDragDisabled={!isReorganizing}
-                                >
-                                  {(provided:any) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.draggableProps}
-                                      {...provided.dragHandleProps}
-                                    >
-                                      <MediaCard media={item} onClick={() => setSelectedMedia(item)} index={index} />
-                                    </div>
-                                  )}
-                                </Draggable>
-                              ))}
-                          </AnimatePresence>
-                          {provided.placeholder}
-                        </div>
-                      )}
-                    </Droppable>
-                  </DragDropContext>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                    <AnimatePresence>
+                      {(filteredMedia.length > 0 ? filteredMediaBySearch(filteredMedia) : filteredMediaBySearch(media))
+                        .filter((item) => selectedCategory === "All" || item.category === selectedCategory)
+                        .map((item, index) => (
+                          <MediaCard key={item.id} media={item} onClick={() => setSelectedMedia(item)} index={index} />
+                        ))}
+                    </AnimatePresence>
+                  </div>
                 )}
                 {media.length > 0 &&
                   (filteredMedia.length > 0 ? filteredMedia : media).filter(
@@ -574,6 +596,12 @@ export default function Home() {
               isOpen={showImportDialog}
               onClose={() => setShowImportDialog(false)}
               onImport={handleImportMedia}
+            />
+            <MediaReorganizer
+              isOpen={isReorganizerOpen}
+              onClose={() => setIsReorganizerOpen(false)}
+              media={media}
+              onSave={handleSaveReorganizedMedia}
             />
           </div>
         </motion.div>
