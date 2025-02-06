@@ -1,9 +1,9 @@
-let userConfig = undefined
+let userConfig = undefined;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
-    TMDB_API_KEY: process.env.TMDB_API_KEY
+    TMDB_API_KEY: process.env.TMDB_API_KEY,
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -19,6 +19,6 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

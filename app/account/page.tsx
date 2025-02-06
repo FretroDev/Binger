@@ -1,16 +1,19 @@
-"use server"
+"use server";
 
-import { createClient } from "@/lib/supabase/server"
-import { redirect } from "next/navigation"
-import AccountPage from "./account-page"
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import AccountPage from "./account-page";
 
 export default async function Page() {
-  const supabase = await createClient()
-  
-  const { data: { user }, error } = await supabase.auth.getUser()
-  
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
   if (error || !user) {
-    redirect("/login")
+    redirect("/login");
   }
 
   // Get user settings
@@ -18,7 +21,7 @@ export default async function Page() {
     .from("user_settings")
     .select("*")
     .eq("id", user.id)
-    .single()
+    .single();
 
-  return <AccountPage user={user} initialSettings={settings} />
+  return <AccountPage user={user} initialSettings={settings} />;
 }

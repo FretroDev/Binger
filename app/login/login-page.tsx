@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   async function handleSubmit(
     formData: FormData,
-    action: typeof login | typeof signup
+    action: typeof login | typeof signup,
   ) {
     try {
       setIsLoading(true);
@@ -71,12 +71,12 @@ export default function LoginPage() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
-              <Button
-                className="w-full bg-violet-600 hover:bg-violet-700 transition-colors text-white"
-                onClick={() => loginWithDiscord()}
-              >
-                Discord
-              </Button>
+            <Button
+              className="w-full bg-blue-700 hover:bg-blue-800 transition-colors text-white"
+              onClick={() => loginWithDiscord()}
+            >
+              Discord
+            </Button>
             <Button
               type="submit"
               className="w-full"

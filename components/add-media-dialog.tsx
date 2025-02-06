@@ -1,22 +1,40 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { Search, Plus, Lock, Unlock, Star } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import { Textarea } from "@/components/ui/textarea"
-import { useMediaQuery } from "@/hooks/use-media-query"
-import { searchTMDB, getTMDBDetails } from "@/lib/tmdb"
-import type { TMDBSearchResult } from "@/types"
-import { Card } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Plus, Lock, Unlock, Star } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
+import { useMediaQuery } from "@/hooks/use-media-query";
+import { searchTMDB, getTMDBDetails } from "@/lib/tmdb";
+import type { TMDBSearchResult } from "@/types";
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface AddMediaDialogProps {
   onAdd: (
@@ -31,72 +49,89 @@ interface AddMediaDialogProps {
     episodeDuration?: number,
     completedSeasons?: number,
     backdropPath?: string,
-  ) => Promise<void>
+  ) => Promise<void>;
 }
 
 export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
-  const [results, setResults] = useState<TMDBSearchResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [selected, setSelected] = useState<TMDBSearchResult | null>(null)
-  const [rating, setRating] = useState([5])
-  const [note, setNote] = useState("")
-  const [duration, setDuration] = useState<number | null>(null)
-  const [isCustomDuration, setIsCustomDuration] = useState(false)
-  const [seasons, setSeasons] = useState<number | null>(null)
-  const [episodesPerSeason, setEpisodesPerSeason] = useState<number | null>(null)
-  const [episodeDuration, setEpisodeDuration] = useState<number | null>(null)
-  const [completedSeasons, setCompletedSeasons] = useState<number>(0)
-  const [isCustomTVDetails, setIsCustomTVDetails] = useState(false)
-  const isDesktop = useMediaQuery("(min-width: 768px)")
-  const [category, setCategory] = useState<"Watched" | "Wishlist" | "Streaming">("Watched")
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<TMDBSearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState<TMDBSearchResult | null>(null);
+  const [rating, setRating] = useState([5]);
+  const [note, setNote] = useState("");
+  const [duration, setDuration] = useState<number | null>(null);
+  const [isCustomDuration, setIsCustomDuration] = useState(false);
+  const [seasons, setSeasons] = useState<number | null>(null);
+  const [episodesPerSeason, setEpisodesPerSeason] = useState<number | null>(
+    null,
+  );
+  const [episodeDuration, setEpisodeDuration] = useState<number | null>(null);
+  const [completedSeasons, setCompletedSeasons] = useState<number>(0);
+  const [isCustomTVDetails, setIsCustomTVDetails] = useState(false);
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [category, setCategory] = useState<
+    "Watched" | "Wishlist" | "Streaming"
+  >("Watched");
 
   useEffect(() => {
     if (selected) {
-      fetchDetails()
+      fetchDetails();
     }
-  }, [selected])
+  }, [selected]);
 
   async function fetchDetails() {
-    if (!selected) return
+    if (!selected) return;
     try {
-      const details = await getTMDBDetails(selected.id, selected.media_type)
+      const details = await getTMDBDetails(selected.id, selected.media_type);
       if (selected.media_type === "movie") {
-        setDuration(details.runtime || 0)
+        setDuration(details.runtime || 0);
       } else {
-        setSeasons(details.number_of_seasons || 0)
+        setSeasons(details.number_of_seasons || 0);
         setEpisodesPerSeason(
-          details.number_of_episodes ? Math.ceil(details.number_of_episodes / (details.number_of_seasons || 1)) : 0,
-        )
-        setEpisodeDuration(details.episode_run_time?.[0] || 0)
+          details.number_of_episodes
+            ? Math.ceil(
+                details.number_of_episodes / (details.number_of_seasons || 1),
+              )
+            : 0,
+        );
+        setEpisodeDuration(details.episode_run_time?.[0] || 0);
       }
     } catch (error) {
-      console.error("Error fetching details:", error)
+      console.error("Error fetching details:", error);
     }
   }
 
   async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!query) return
+    e.preventDefault();
+    if (!query) return;
 
-    setLoading(true)
+    setLoading(true);
     try {
-      const results = await searchTMDB(query)
-      setResults(results.filter((r) => r.media_type === "movie" || r.media_type === "tv"))
+      const results = await searchTMDB(query);
+      setResults(
+        results.filter(
+          (r) => r.media_type === "movie" || r.media_type === "tv",
+        ),
+      );
     } catch (error) {
-      console.error("Error searching for media:", error)
+      console.error("Error searching for media:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleAdd() {
-    if (!selected) return
+    if (!selected) return;
 
-    let finalDuration = duration
-    if (selected.media_type === "tv" && seasons && episodesPerSeason && episodeDuration) {
-      finalDuration = seasons * episodesPerSeason * episodeDuration
+    let finalDuration = duration;
+    if (
+      selected.media_type === "tv" &&
+      seasons &&
+      episodesPerSeason &&
+      episodeDuration
+    ) {
+      finalDuration = seasons * episodesPerSeason * episodeDuration;
     }
 
     await onAdd(
@@ -111,24 +146,24 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
       episodeDuration || undefined,
       category === "Streaming" ? completedSeasons : undefined,
       selected.backdrop_path || undefined,
-    )
+    );
 
-    resetForm()
+    resetForm();
   }
 
   function resetForm() {
-    setSelected(null)
-    setNote("")
-    setDuration(null)
-    setIsCustomDuration(false)
-    setSeasons(null)
-    setEpisodesPerSeason(null)
-    setEpisodeDuration(null)
-    setCompletedSeasons(0)
-    setIsCustomTVDetails(false)
-    setQuery("")
-    setResults([])
-    setOpen(false)
+    setSelected(null);
+    setNote("");
+    setDuration(null);
+    setIsCustomDuration(false);
+    setSeasons(null);
+    setEpisodesPerSeason(null);
+    setEpisodeDuration(null);
+    setCompletedSeasons(0);
+    setIsCustomTVDetails(false);
+    setQuery("");
+    setResults([]);
+    setOpen(false);
   }
 
   const dialogContent = (
@@ -192,7 +227,9 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                           <h3 className="font-semibold text-white text-lg mb-2 line-clamp-2">
                             {result.title || result.name}
                           </h3>
-                          <p className="text-xs text-white/80 line-clamp-3">{result.overview}</p>
+                          <p className="text-xs text-white/80 line-clamp-3">
+                            {result.overview}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -224,8 +261,12 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-lg">{selected.title || selected.name}</h3>
-                <p className="text-sm text-muted-foreground capitalize">{selected.media_type}</p>
+                <h3 className="font-semibold text-lg">
+                  {selected.title || selected.name}
+                </h3>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {selected.media_type}
+                </p>
                 <p className="text-sm mt-2">{selected.overview}</p>
               </div>
             </div>
@@ -233,15 +274,24 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
             {/* Rest of the component remains the same */}
             <div className="space-y-2">
               <Label>Your Rating</Label>
-              <div className="text-center mb-2">Rating: {rating[0].toFixed(1)}/10</div>
-              <Slider max={10} step={0.1} value={rating} onValueChange={setRating} />
+              <div className="text-center mb-2">
+                Rating: {rating[0].toFixed(1)}/10
+              </div>
+              <Slider
+                max={10}
+                step={0.1}
+                value={rating}
+                onValueChange={setRating}
+              />
             </div>
 
             <div className="space-y-2">
               <Label>Category</Label>
               <Select
                 value={category}
-                onValueChange={(value: "Watched" | "Wishlist" | "Streaming") => setCategory(value)}
+                onValueChange={(value: "Watched" | "Wishlist" | "Streaming") =>
+                  setCategory(value)
+                }
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select category" />
@@ -265,8 +315,16 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                     disabled={!isCustomDuration}
                     className="mr-2"
                   />
-                  <Button variant="outline" size="icon" onClick={() => setIsCustomDuration(!isCustomDuration)}>
-                    {isCustomDuration ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsCustomDuration(!isCustomDuration)}
+                  >
+                    {isCustomDuration ? (
+                      <Unlock className="h-4 w-4" />
+                    ) : (
+                      <Lock className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -275,8 +333,16 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label>TV Show Details</Label>
-                    <Button variant="outline" size="sm" onClick={() => setIsCustomTVDetails(!isCustomTVDetails)}>
-                      {isCustomTVDetails ? <Unlock className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsCustomTVDetails(!isCustomTVDetails)}
+                    >
+                      {isCustomTVDetails ? (
+                        <Unlock className="h-4 w-4 mr-2" />
+                      ) : (
+                        <Lock className="h-4 w-4 mr-2" />
+                      )}
                       {isCustomTVDetails ? "Unlock" : "Edit"}
                     </Button>
                   </div>
@@ -296,7 +362,9 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                       <Input
                         type="number"
                         value={episodesPerSeason || ""}
-                        onChange={(e) => setEpisodesPerSeason(Number(e.target.value))}
+                        onChange={(e) =>
+                          setEpisodesPerSeason(Number(e.target.value))
+                        }
                         disabled={!isCustomTVDetails}
                         className="mt-1"
                       />
@@ -306,7 +374,9 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                       <Input
                         type="number"
                         value={episodeDuration || ""}
-                        onChange={(e) => setEpisodeDuration(Number(e.target.value))}
+                        onChange={(e) =>
+                          setEpisodeDuration(Number(e.target.value))
+                        }
                         disabled={!isCustomTVDetails}
                         className="mt-1"
                       />
@@ -319,7 +389,9 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
                     <Input
                       type="number"
                       value={completedSeasons}
-                      onChange={(e) => setCompletedSeasons(Number(e.target.value))}
+                      onChange={(e) =>
+                        setCompletedSeasons(Number(e.target.value))
+                      }
                       max={seasons || undefined}
                     />
                   </div>
@@ -329,7 +401,11 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
 
             <div className="space-y-2">
               <Label>Notes</Label>
-              <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add your thoughts..." />
+              <Textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Add your thoughts..."
+              />
             </div>
             <div className="flex gap-2">
               <Button onClick={handleAdd} className="w-full">
@@ -347,13 +423,13 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
         )}
       </ScrollArea>
     </div>
-  )
+  );
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button>
-          <Plus className="w-4 h-4 mr-2" />
+            <Plus className="w-4 h-4 mr-2" />
             Add Media
           </Button>
         </DialogTrigger>
@@ -364,7 +440,7 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
           {dialogContent}
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
   return (
@@ -382,5 +458,5 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
         {dialogContent}
       </DrawerContent>
     </Drawer>
-  )
+  );
 }
