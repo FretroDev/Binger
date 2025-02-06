@@ -24,6 +24,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { searchTMDB, getTMDBDetails } from "@/lib/tmdb";
+import { handleAddMedia } from "@/lib/storage";
 import type { TMDBSearchResult } from "@/types";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,43 +37,14 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-interface AddMediaDialogProps {
-  onAdd: (
-    tmdbId: number,
-    type: "movie" | "tv",
-    rating: number,
-    category: "Watched" | "Wishlist" | "Streaming",
-    note?: string,
-    customDuration?: number,
-    seasons?: number,
-    episodesPerSeason?: number,
-    episodeDuration?: number,
-    completedSeasons?: number,
-    backdropPath?: string,
-  ) => Promise<void>;
-}
-
-export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
+export function AddMediaDialog() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<TMDBSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<TMDBSearchResult | null>(null);
-  const [rating, setRating] = useState([5]);
-  const [note, setNote] = useState("");
-  const [duration, setDuration] = useState<number | null>(null);
-  const [isCustomDuration, setIsCustomDuration] = useState(false);
-  const [seasons, setSeasons] = useState<number | null>(null);
-  const [episodesPerSeason, setEpisodesPerSeason] = useState<number | null>(
-    null,
-  );
-  const [episodeDuration, setEpisodeDuration] = useState<number | null>(null);
-  const [completedSeasons, setCompletedSeasons] = useState<number>(0);
-  const [isCustomTVDetails, setIsCustomTVDetails] = useState(false);
+
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const [category, setCategory] = useState<
-    "Watched" | "Wishlist" | "Streaming"
-  >("Watched");
 
   useEffect(() => {
     if (selected) {
@@ -121,46 +93,18 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
     }
   }
 
-  async function handleAdd() {
+  async function handleAdd(
+    note: string,
+    rating: number,
+    category: "Watched" | "Wishlist" | "Streaming",
+  ) {
     if (!selected) return;
-
-    let finalDuration = duration;
-    if (
-      selected.media_type === "tv" &&
-      seasons &&
-      episodesPerSeason &&
-      episodeDuration
-    ) {
-      finalDuration = seasons * episodesPerSeason * episodeDuration;
-    }
-
-    await onAdd(
-      selected.id,
-      selected.media_type,
-      rating[0],
-      category,
-      note,
-      finalDuration || undefined,
-      seasons || undefined,
-      episodesPerSeason || undefined,
-      episodeDuration || undefined,
-      category === "Streaming" ? completedSeasons : undefined,
-      selected.backdrop_path || undefined,
-    );
-
+    await handleAddMedia({ note, rating, category, ...selected });
     resetForm();
   }
 
   function resetForm() {
     setSelected(null);
-    setNote("");
-    setDuration(null);
-    setIsCustomDuration(false);
-    setSeasons(null);
-    setEpisodesPerSeason(null);
-    setEpisodeDuration(null);
-    setCompletedSeasons(0);
-    setIsCustomTVDetails(false);
     setQuery("");
     setResults([]);
     setOpen(false);
@@ -424,6 +368,7 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
       </ScrollArea>
     </div>
   );
+
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>

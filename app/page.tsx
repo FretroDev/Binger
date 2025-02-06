@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -65,100 +64,12 @@ import {
 import { Input } from "@/components/ui/input";
 
 export default function Home() {
-  const [media, setMedia] = useState<Media[]>([]);
+  const [media, setMedia] = useState<Media[]>(getStoredMedia());
   const [selectedMedia, setSelectedMedia] = useState<Media | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [configError, setConfigError] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isSupabaseReady, setIsSupabaseReady] = useState(false);
-  const [isReorganizing, setIsReorganizing] = useState(false);
-  const [filteredMedia, setFilteredMedia] = useState<Media[]>([]);
-  const [activeFilters, setActiveFilters] = useState({
-    tmdbRating: "",
-    userRating: "",
-    dateAdded: "",
-  });
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isReorganizerOpen, setIsReorganizerOpen] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    const initializeApp = async () => {
-      setIsLoading(true);
-      setConfigError(null);
-
-      // Check Supabase configuration
-      const isConfigured = isSupabaseConfigured();
-      setIsSupabaseReady(isConfigured);
-
-      if (!isConfigured) {
-        const errorMessage = getSupabaseErrorMessage();
-        setConfigError(errorMessage || "Failed to initialize Supabase client.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Check session
-      try {
-        const { data, error } = await supabase!.auth.getSession();
-        if (error) throw error;
-        setSession(data.session);
-      } catch (error) {
-        console.error("Error fetching session:", error);
-        setConfigError(
-          "Failed to fetch user session. Please try logging in again.",
-        );
-      }
-
-      // Load initial data
-      try {
-        let mediaData: Media[];
-        if (session) {
-          const { data, error } = await supabase!
-            .from("media")
-            .select("*")
-            .order("created_at", { ascending: false });
-          if (error) throw error;
-          mediaData = data;
-        } else {
-          mediaData = getStoredMedia();
-        }
-        setMedia(mediaData);
-
-        // Test TMDB API configuration
-        await searchTMDB("test");
-      } catch (error) {
-        console.error("Error loading initial data:", error);
-        if (
-          error instanceof Error &&
-          error.message.includes("TMDB API key is not configured")
-        ) {
-          setConfigError(
-            "TMDB API key is not configured. Please check your environment variables.",
-          );
-        } else {
-          setConfigError(
-            "Failed to load your media library. Please try refreshing the page.",
-          );
-        }
-      }
-
-      setIsLoading(false);
-    };
-
-    initializeApp();
-
-    // Set up auth state change listener
-    const {
-      data: { subscription },
-    } = supabase?.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    }) || { data: { subscription: { unsubscribe: () => {} } } };
-
-    return () => subscription.unsubscribe();
-  }, [session]);
 
   const filterOptions = [
     {
@@ -227,50 +138,9 @@ export default function Home() {
     linkElement.click();
   }
 
-  async function handleImportMedia(mediaToImport: Media[]) {
-    try {
-      console.log("Importing media:", mediaToImport);
-      const newMedia = mediaToImport.filter(
-        (importedItem) =>
-          !media.some((existingItem) => existingItem.id === importedItem.id),
-      );
-      const updatedMedia = [...media, ...newMedia];
-      setMedia(updatedMedia);
-
-      if (isSupabaseReady && session) {
-        const { error } = await supabase!.from("media").insert(newMedia);
-        if (error) throw error;
-      }
-
-      // Always store in localStorage (cookies)
-      storeMedia(updatedMedia);
-
-      toast({
-        title: "Import Successful",
-        description: `Added ${newMedia.length} new items to your library.`,
-      });
-    } catch (error) {
-      console.error("Error importing media:", error);
-      console.log("Error details:", JSON.stringify(error, null, 2));
-      toast({
-        title: "Import Failed",
-        description:
-          "There was an error importing the media. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }
-
   const handleSaveReorganizedMedia = (newOrder: Media[]) => {
     setMedia(newOrder);
-    if (isSupabaseReady && session) {
-      // Update the order in Supabase
-      newOrder.forEach((item, index) => {
-        supabase!.from("media").update({ order: index }).eq("id", item.id);
-      });
-    } else {
-      storeMedia(newOrder);
-    }
+    storeMedia(newOrder);
     toast({
       title: "Success",
       description: "Media order updated successfully.",

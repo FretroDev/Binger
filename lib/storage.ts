@@ -36,15 +36,29 @@ export function storeMedia(media: Media[]) {
   }
 }
 
-async function handleAddMedia(
-  tmdbId: number,
-  type: "movie" | "tv",
-  duration: string,
-  rating: number,
-  category: "Watched" | "Wishlist" | "Streaming",
-  note?: string,
-  watchedSeasons?: string,
-) {
+export async function handleImportMedia(mediaToImport: Media[]) {
+  let media = getStoredMedia();
+  const updatedMedia = [...media, ...mediaToImport];
+  storeMedia(updatedMedia);
+}
+
+export async function handleAddMedia({
+  tmdbId,
+  type,
+  duration,
+  rating,
+  category,
+  note,
+  watchedSeasons,
+}: {
+  id: number;
+  media_type: "movie" | "tv";
+  rating: number;
+  category: "Watched" | "Wishlist" | "Streaming";
+  note?: string;
+  duration?: string;
+  watchedSeasons?: string;
+}) {
   // Check if the media already exists in the library
   let media = getStoredMedia();
   if (media.find((item) => item.id === tmdbId)) {
@@ -68,9 +82,9 @@ async function handleAddMedia(
     releaseDate: details?.release_date || details?.first_air_date,
   };
 
-  if (type === "movie") {
+  if (media_type === "movie") {
     newMedia = {
-      runtime: details.runtime,
+      runtime: duration || details.runtime,
     } as Movie;
   } else {
     newMedia = {
@@ -85,7 +99,7 @@ async function handleAddMedia(
   storeMedia(media);
 }
 
-async function handleUpdateMedia(
+export async function handleUpdateMedia(
   id: string,
   note: string,
   duration: number,
@@ -151,7 +165,7 @@ async function handleUpdateMedia(
   }
 }
 
-async function handleDeleteMedia(id: number) {
+export async function handleDeleteMedia(id: number) {
   // Remove the media item from the local state
   const media = getStoredMedia();
   const updatedMedia = media.filter((item) => item.id !== id);

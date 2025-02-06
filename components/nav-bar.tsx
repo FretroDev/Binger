@@ -14,30 +14,7 @@ import { User } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 
-interface NavBarProps {
-  session: Session | null;
-  isSupabaseReady: boolean;
-  supabase: any;
-  onAddMedia: (
-    tmdbId: number,
-    type: "movie" | "tv",
-    rating: number,
-    category: "Watched" | "Wishlist" | "Streaming",
-    note?: string,
-    customDuration?: number,
-    seasons?: number,
-    episodesPerSeason?: number,
-    episodeDuration?: number,
-    completedSeasons?: number,
-  ) => Promise<void>;
-}
-
-export function NavBar({
-  session,
-  isSupabaseReady,
-  supabase,
-  onAddMedia,
-}: NavBarProps) {
+export function NavBar() {
   const router = useRouter();
 
   return (
@@ -45,33 +22,8 @@ export function NavBar({
       <h1 className="text-3xl sm:text-4xl font-bold">Binger</h1>
       <div className="flex flex-wrap items-center gap-4">
         <ThemeToggle />
-        {isSupabaseReady && session ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Avatar>
-                <AvatarImage src={session.user.user_metadata.avatar_url} />
-                <AvatarFallback>
-                  <User className="w-4 h-4" />
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>{session.user.email}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={async () => {
-                  await supabase?.auth.signOut();
-                  router.push("/login");
-                }}
-              >
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button onClick={() => router.push("/login")}>Login</Button>
-        )}
-        <AddMediaDialog onAdd={onAddMedia} />
+        <Button onClick={() => router.push("/login")}>Login</Button>
+        <AddMediaDialog />
       </div>
     </div>
   );
