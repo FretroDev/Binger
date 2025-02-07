@@ -55,5 +55,3 @@ export const MediaGrid = ({ media }: { media: Media[] }) => {
     </div>
   );
 };
-
-export default MediaGrid;

@@ -1,4 +1,4 @@
-export type Media = {
+export interface BaseMedia {
   id: number;
   title: string;
   posterPath: string;
@@ -11,17 +11,29 @@ export type Media = {
   overview?: string;
   order?: number;
   category: "Watched" | "Wishlist" | "Streaming";
-};
+  type: "movie" | "tv";
+}
 
-export type Movie = Media & {
+export interface Movie extends BaseMedia {
+  type: "movie";
   runtime: number;
-};
+}
 
-export type Show = Media & {
+export const isMovie = (media: Movie | Show): media is Movie =>
+  media.type === "movie";
+
+export interface Show extends BaseMedia {
+  type: "tv";
   numOfSeasons: number;
+  episodesPerSeason: number;
   episodeRuntime: number;
   watchedSeasons: number;
-};
+}
+
+export type Media = Movie | Show;
+
+export const isShow = (media: Movie | Show): media is Show =>
+  media.type === "tv";
 
 export type TMDBSearchResult = {
   id: number;
@@ -47,4 +59,6 @@ export type TMDBDetails = {
   number_of_seasons?: number;
   vote_average: number;
   overview: string;
+  first_air_date?: string;
+  release_date?: string;
 };

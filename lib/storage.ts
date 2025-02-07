@@ -1,4 +1,4 @@
-import type { Media, Movie, Show } from "@/types";
+import { BaseMedia, isMovie, type Media, type Movie, type Show } from "@/types";
 import { getTMDBDetails } from "./tmdb";
 
 const STORAGE_KEY = "binger-media";
@@ -42,6 +42,16 @@ export async function handleImportMedia(mediaToImport: Media[]) {
   storeMedia(updatedMedia);
 }
 
+export const getMediaDuration = (media: Media) => {
+  if (isMovie(media)) {
+    return media.runtime;
+  } else {
+    return (
+      media.watchedSeasons * media.episodesPerSeason * media.episodeRuntime
+    );
+  }
+};
+
 export async function handleAddMedia({
   tmdbId,
   type,
@@ -51,8 +61,8 @@ export async function handleAddMedia({
   note,
   watchedSeasons,
 }: {
-  id: number;
-  media_type: "movie" | "tv";
+  tmdbId: number;
+  type: "movie" | "tv";
   rating: number;
   category: "Watched" | "Wishlist" | "Streaming";
   note?: string;
@@ -67,7 +77,7 @@ export async function handleAddMedia({
 
   const details = await getTMDBDetails(tmdbId, type);
 
-  let newMedia: Media = {
+  let baseMedia: BaseMedia = {
     id: tmdbId,
     title: details.title || "",
     posterPath: details.poster_path,
@@ -78,21 +88,23 @@ export async function handleAddMedia({
     note,
     overview: details.overview,
     category,
-
-    releaseDate: details?.release_date || details?.first_air_date,
+    releaseDate: details?.release_date || details?.first_air_date || "N/A",
+    type,
   };
 
-  if (media_type === "movie") {
-    newMedia = {
-      runtime: duration || details.runtime,
-    } as Movie;
+  let newMedia: Media;
+
+  if (type == "movie") {
+    newMedia = { ...baseMedia, runtime: details.runtime || 0, type: "movie" };
   } else {
     newMedia = {
-      ...newMedia,
+      ...baseMedia,
+      watchedSeasons: parseInt(watchedSeasons || "0"),
       numOfSeasons: details.number_of_seasons || 0,
+      episodesPerSeason: details.number_of_seasons || 0,
       episodeRuntime: details.episode_run_time?.[0] || 0,
-      watchedSeasons: watchedSeasons ? parseInt(watchedSeasons) : 0,
-    } as Show;
+      type: "tv",
+    };
   }
 
   media.push(newMedia);
@@ -100,7 +112,7 @@ export async function handleAddMedia({
 }
 
 export async function handleUpdateMedia(
-  id: string,
+  id: number,
   note: string,
   duration: number,
   rating: number,
@@ -110,59 +122,17 @@ export async function handleUpdateMedia(
   episodesPerSeason?: number,
   episodeDuration?: number,
 ) {
-  try {
-    const updatedMedia = media.map((item) => {
-      if (item.id === id) {
-        const updatedItem = {
-          ...item,
-          note,
-          customDuration: duration !== item.runtime ? duration : undefined,
-          rating,
-          category,
-          watchedSeasons:
-            category === "Streaming" && item.type === "tv"
-              ? watchedSeasons
-              : undefined,
-          seasons,
-          episodesPerSeason,
-          episodeDuration,
-        };
-
-        return updatedItem;
-      }
-      return item;
-    });
-
-    if (isSupabaseReady && session) {
-      const { error } = await supabase!
-        .from("media")
-        .update({
-          note,
-          customDuration:
-            duration !== updatedMedia.find((m) => m.id === id)?.runtime
-              ? duration
-              : null,
-          rating,
-          category,
-          watchedSeasons: category === "Streaming" ? watchedSeasons : null,
-          seasons,
-          episodesPerSeason,
-          episodeDuration,
-        })
-        .eq("id", id);
-      if (error) throw error;
-    }
-
-    setMedia(updatedMedia);
-    storeMedia(updatedMedia);
-    setSelectedMedia(updatedMedia.find((item) => item.id === id) || null);
-    toast({
-      title: "Success",
-      description: "Media updated successfully.",
-    });
-  } catch (error) {
-    console.error("Error updating media:", error);
-  }
+  const updatedItem: Media = {
+    id,
+    note,
+    rating,
+    category,
+    watchedSeasons,
+    runtime: duration,
+    numOfSeasons: seasons,
+    episodeRuntime: episodeDuration,
+    episodeCount: episodesPerSeason,
+  };
 }
 
 export async function handleDeleteMedia(id: number) {

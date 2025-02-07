@@ -31,26 +31,12 @@ import { useSwipeable } from "react-swipeable";
 
 interface MediaSheetProps {
   media: Media;
-  onClose: () => void;
-  onDelete: (id: string) => void;
-  onUpdate: (
-    id: string,
-    note: string,
-    duration: number,
-    rating: number,
-    category: "Watched" | "Wishlist" | "Streaming",
-    watchedSeasons?: number,
-    seasons?: number,
-    episodesPerSeason?: number,
-    episodeDuration?: number,
-  ) => void;
+  open: boolean;
 }
 
 export function MediaSheet({
   media,
-  onClose,
-  onDelete,
-  onUpdate,
+  open
 }: MediaSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [note, setNote] = useState("");

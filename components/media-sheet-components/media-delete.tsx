@@ -1,12 +1,30 @@
+import { Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import type { Media } from "@/types";
+import { handleDeleteMedia } from "@/lib/storage";
+import Router from "next/router";
+
 export const MediaDelete = ({ media }: { media: Media }) => {
+  const handleDelete = async () => {
+    await handleDeleteMedia(media.id);
+    Router.reload();
+  };
+  
   return (
     <AlertDialog>
       <AlertDialogTrigger>
-        <Button
-          variant="destructive"
-          className="flex-1"
-          onClick={() => setShowDeleteDialog(true)}
-        >
+        <Button variant="destructive" className="flex-1">
           <Trash className="w-4 h-4 mr-2" />
           Delete
         </Button>

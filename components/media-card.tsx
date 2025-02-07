@@ -1,17 +1,18 @@
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Media } from "@/types";
+import { isShow, type Media } from "@/types";
 import { Star } from "lucide-react";
 import { MediaSheet } from "./media-sheet";
+import { useState } from "react";
 
 interface MediaCardProps {
   media: Media;
-  onClick: () => void;
   index: number;
 }
 
 export function MediaCard({ media, index }: MediaCardProps) {
+  let [isMediaSheetOpen, setIsMediaSheetOpen] = useState(false);
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -19,6 +20,7 @@ export function MediaCard({ media, index }: MediaCardProps) {
       transition={{ delay: index * 0.05 }}
     >
       <Card
+        onClick={() => setIsMediaSheetOpen(true)}
         className={`group relative overflow-hidden rounded-xl cursor-pointer transition-all duration-300 hover:scale-95 hover:shadow-xl h-full
           ${
             media.category === "Wishlist"
@@ -67,20 +69,21 @@ export function MediaCard({ media, index }: MediaCardProps) {
                   variant="outline"
                   className="text-xs bg-white/10 text-white border-none backdrop-blur-sm"
                 >
-                  {media.type === "tv" ? `TV` : `Movie`}
+                  {isShow(media) ? `TV` : `Movie`}
                 </Badge>
                 <Badge
                   variant="outline"
                   className="text-xs bg-white/10 text-white border-none backdrop-blur-sm"
                 >
-                  {media.type === "tv"
-                    ? `${media.seasons || 0} Season${media.seasons !== 1 ? "s" : ""}`
-                    : `${media.customDuration || media.runtime} mins`}
+                  {isShow(media)
+                    ? `${media.numOfSeasons || 0} Season${media.numOfSeasons !== 1 ? "s" : ""}`
+                    : `${media.runtime || media.runtime} mins`}
                 </Badge>
               </div>
             </motion.div>
           </div>
         </div>
+        <MediaSheet open={isMediaSheetOpen}/>
       </Card>
     </motion.div>
   );

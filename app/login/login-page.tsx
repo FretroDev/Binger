@@ -72,7 +72,7 @@ export default function LoginPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
             <Button
-              className="w-full bg-blue-700 hover:bg-blue-800 transition-colors text-white"
+              className="w-full bg-indigo-700 hover:bg-indigo-800 transition-colors text-white"
               onClick={() => loginWithDiscord()}
             >
               Discord

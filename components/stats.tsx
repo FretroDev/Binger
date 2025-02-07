@@ -2,13 +2,10 @@ import { useEffect, useState } from "react";
 import { motion, useAnimation } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Film, Tv } from "lucide-react";
-import type { Media } from "@/types";
+import { isMovie, isShow, type Media, type Movie, type Show } from "@/types";
+import { getMediaDuration } from "@/lib/storage";
 
-interface StatsProps {
-  media: Media[];
-}
-
-const CountUp = ({ end, duration = 2 }) => {
+const CountUp = ({ end, duration = 2 }: any) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -30,36 +27,18 @@ const CountUp = ({ end, duration = 2 }) => {
   return <>{count}</>;
 };
 
-export function Stats({ media }: StatsProps) {
+const calculateTotalMinutes = (mediaList: Media[]) => {
+  let total = 0;
+  mediaList.forEach((media) => {
+    total += getMediaDuration(media);
+  });
+  return total;
+};
+
+export function Stats({ media }: { media: Media[] }) {
   const [totalWatchTime, setTotalWatchTime] = useState(0);
 
   useEffect(() => {
-    const calculateTotalMinutes = (mediaList: Media[]) => {
-      return mediaList.reduce((acc, item) => {
-        if (item.type === "movie") {
-          return acc + (item.customDuration || item.runtime);
-        } else if (item.type === "tv") {
-          if (item.customDuration) {
-            return acc + item.customDuration;
-          } else if (
-            item.seasons &&
-            item.episodesPerSeason &&
-            item.episodeDuration
-          ) {
-            const watchedSeasons =
-              item.category === "Streaming"
-                ? item.watchedSeasons || 0
-                : item.seasons;
-            return (
-              acc +
-              watchedSeasons * item.episodesPerSeason * item.episodeDuration
-            );
-          }
-        }
-        return acc;
-      }, 0);
-    };
-
     const watchedMedia = media.filter((item) => item.category === "Watched");
     const streamingMedia = media.filter(
       (item) => item.category === "Streaming",
