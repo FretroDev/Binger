@@ -1,10 +1,8 @@
 "use client"
 
 import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import type { Media } from "@/types"
-import { getTMDBDetails } from "@/lib/tmdb"
 
 interface MediaPreviewProps {
   media: Media | null
@@ -13,34 +11,11 @@ interface MediaPreviewProps {
 
 export function MediaPreview({ media, children }: MediaPreviewProps) {
   const [showVideo, setShowVideo] = useState(false)
-  const [videoKey, setVideoKey] = useState<string | null>(null)
   const timeoutRef = useRef<NodeJS.Timeout>()
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  useEffect(() => {
-    const fetchVideo = async () => {
-      if (!media) return
-
-      try {
-        const details = await getTMDBDetails(media.tmdbId, media.type)
-        const videos = details.videos?.results || []
-        const trailer = videos.find(
-          (video) =>
-            video.site === "YouTube" && (video.type === "Trailer" || video.type === "Teaser") && video.official,
-        )
-        if (trailer) {
-          setVideoKey(trailer.key)
-        }
-      } catch (error) {
-        console.error("Error fetching video:", error)
-      }
-    }
-
-    fetchVideo()
-  }, [media])
-
   const handleMouseEnter = () => {
-    if (!videoKey) return
+    if (!media?.trailerKey) return
     timeoutRef.current = setTimeout(() => {
       setShowVideo(true)
     }, 3000)
@@ -71,7 +46,7 @@ export function MediaPreview({ media, children }: MediaPreviewProps) {
       />
 
       {/* YouTube Video */}
-      {videoKey && (
+      {media.trailerKey && (
         <div
           className={`absolute inset-0 transition-opacity duration-700 ${
             showVideo ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -81,7 +56,7 @@ export function MediaPreview({ media, children }: MediaPreviewProps) {
             ref={iframeRef}
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${videoKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoKey}&modestbranding=1`}
+            src={`https://www.youtube.com/embed/${media.trailerKey}?autoplay=1&mute=1&controls=0&loop=1&playlist=${media.trailerKey}&modestbranding=1&rel=0&showinfo=0`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             className="absolute inset-0 w-full h-full"
           />

@@ -10,7 +10,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { ArrowUpDown, Filter, MoreHorizontal, FileJson, Download } from "lucide-react"
+import { ArrowUpDown, Filter, MoreHorizontal, FileJson, Download, Search } from "lucide-react"
 
 interface MediaFiltersProps {
   searchQuery: string
@@ -47,13 +47,16 @@ export function MediaFilters({
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-4 space-y-4 sm:space-y-0">
       <div className="flex items-center space-x-4 w-full sm:w-auto">
         <h2 className="text-2xl font-bold">Collection</h2>
-        <Input
-          type="text"
-          placeholder="Search media..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:w-64"
-        />
+        <div className="relative flex-1 sm:w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search media..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-full"
+          />
+        </div>
       </div>
       <div className="flex items-center gap-4 w-full sm:w-auto">
         <Select value={selectedCategory} onValueChange={setSelectedCategory}>
@@ -107,11 +110,11 @@ export function MediaFilters({
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setShowImportDialog(true)}>
               <FileJson className="mr-2 h-4 w-4" />
-              <span>Import JSON</span>
+              <span>Import Data</span>
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={exportMedia}>
               <Download className="mr-2 h-4 w-4" />
-              <span>Export JSON</span>
+              <span>Export Data</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

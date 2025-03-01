@@ -33,17 +33,34 @@ export async function GET(request: Request) {
   try {
     let data: TMDBSearchResult[] | TMDBDetails
 
-    if (action === "search" && query) {
-      const result = await fetchTMDB("/search/multi", { query, include_adult: "false" })
-      data = result.results as TMDBSearchResult[]
-    } else if (action === "details" && id && type) {
-      const params: Record<string, string> = {}
-      if (appendToResponse) {
-        params.append_to_response = appendToResponse
-      }
-      data = (await fetchTMDB(`/${type}/${id}`, params)) as TMDBDetails
-    } else {
-      throw new Error("Invalid action or missing parameters")
+    switch (action) {
+      case "search":
+        if (!query) throw new Error("Query parameter is required for search")
+        const result = await fetchTMDB("/search/multi", { query, include_adult: "false" })
+        data = result.results as TMDBSearchResult[]
+        break
+
+      case "details":
+        if (!id || !type) throw new Error("ID and type parameters are required for details")
+        const params: Record<string, string> = {
+          append_to_response: "videos,images", // Add images to the request
+        }
+        data = (await fetchTMDB(`/${type}/${id}`, params)) as TMDBDetails
+        break
+
+      case "trending":
+        const trending = await fetchTMDB("/trending/all/day")
+        data = trending.results as TMDBSearchResult[]
+        break
+
+      case "top_rated":
+        if (!type) throw new Error("Type parameter is required for top rated")
+        const topRated = await fetchTMDB(`/${type}/top_rated`)
+        data = topRated.results as TMDBSearchResult[]
+        break
+
+      default:
+        throw new Error("Invalid action parameter")
     }
 
     return NextResponse.json(data)

@@ -14,6 +14,7 @@ import { NavBar } from "@/components/nav-bar"
 import { MediaFilters } from "@/components/media-filters"
 import { ImportDialog } from "@/components/import-dialog"
 import { MediaReorganizer } from "@/components/media-reorganizer"
+import { useMediaLibrary } from "@/hooks/use-media-library"
 
 export function EmptyMediaState() {
   return (
@@ -25,7 +26,7 @@ export function EmptyMediaState() {
 }
 
 export default function Home() {
-  const [media, setMedia] = useState<Media[]>([])
+  const { media, setMedia } = useMediaLibrary()
   const [isLoading, setIsLoading] = useState(true)
   const [filteredMedia, setFilteredMedia] = useState<Media[]>([])
   const [activeFilters, setActiveFilters] = useState({
@@ -47,7 +48,7 @@ export default function Home() {
     }
 
     loadMedia()
-  }, [])
+  }, [setMedia])
 
   const handleAddMedia = async (
     tmdbId: number,
@@ -73,6 +74,12 @@ export default function Home() {
       }
 
       const details = await getTMDBDetails(tmdbId, type)
+
+      // Find trailer
+      const videos = details.videos?.results || []
+      const trailer = videos.find(
+        (video) => video.site === "YouTube" && (video.type === "Trailer" || video.type === "Teaser") && video.official,
+      )
 
       let duration = customDuration
       if (type === "tv" && !customDuration && seasons && episodesPerSeason && episodeDuration) {
@@ -100,6 +107,7 @@ export default function Home() {
         episodeDuration: type === "tv" ? episodeDuration : undefined,
         release_date: details.release_date,
         first_air_date: details.first_air_date,
+        trailerKey: trailer?.key || null,
       }
 
       const updatedMedia = [newMedia, ...media]

@@ -1,4 +1,12 @@
+export type Settings = {
+  showMovieLogos: boolean
+  animateCards?: boolean
+  autoplayTrailers?: boolean
+}
+
 export type Media = {
+  episodeDuration: number
+  episodesPerSeason: number
   id: string
   tmdbId: number
   title: string
@@ -19,6 +27,7 @@ export type Media = {
   category: "Watched" | "Wishlist" | "Streaming"
   order?: number
   watchedSeasons?: number
+  trailerKey?: string | null
 }
 
 export type TMDBSearchResult = {
@@ -56,4 +65,3 @@ export type TMDBDetails = {
     results: TMDBVideo[]
   }
 }
-

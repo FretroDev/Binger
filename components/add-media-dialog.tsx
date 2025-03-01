@@ -1,10 +1,8 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Plus, Lock, Unlock, Star } from "lucide-react"
+import { Plus, Lock, Unlock, Star, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
@@ -19,6 +17,7 @@ import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { useDebounce } from "@/hooks/use-debounce"
 
 interface AddMediaDialogProps {
   onAdd: (
@@ -52,12 +51,35 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
   const [isCustomTVDetails, setIsCustomTVDetails] = useState(false)
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const [category, setCategory] = useState<"Watched" | "Wishlist" | "Streaming">("Watched")
+  const [searchQuery, setSearchQuery] = useState("")
+  const debouncedQuery = useDebounce(searchQuery, 300)
 
   useEffect(() => {
     if (selected) {
       fetchDetails()
     }
   }, [selected])
+
+  useEffect(() => {
+    async function performSearch() {
+      if (!debouncedQuery) {
+        setResults([])
+        return
+      }
+
+      setLoading(true)
+      try {
+        const results = await searchTMDB(debouncedQuery)
+        setResults(results.filter((r) => r.media_type === "movie" || r.media_type === "tv"))
+      } catch (error) {
+        console.error("Error searching for media:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    performSearch()
+  }, [debouncedQuery])
 
   async function fetchDetails() {
     if (!selected) return
@@ -74,21 +96,6 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
       }
     } catch (error) {
       console.error("Error fetching details:", error)
-    }
-  }
-
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!query) return
-
-    setLoading(true)
-    try {
-      const results = await searchTMDB(query)
-      setResults(results.filter((r) => r.media_type === "movie" || r.media_type === "tv"))
-    } catch (error) {
-      console.error("Error searching for media:", error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -129,21 +136,22 @@ export function AddMediaDialog({ onAdd }: AddMediaDialogProps) {
     setQuery("")
     setResults([])
     setOpen(false)
+    setSearchQuery("")
   }
 
   const dialogContent = (
     <div className="grid gap-4 py-4 max-h-[600px]">
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <Input
-          placeholder="Search for a movie or TV show..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <Button type="submit" disabled={loading}>
-          <Search className="w-4 h-4 mr-2" />
-          Search
-        </Button>
-      </form>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search for a movie or TV show..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-full"
+          />
+        </div>
+      </div>
 
       <ScrollArea className="h-[400px] pr-4">
         {!selected ? (

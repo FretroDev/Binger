@@ -29,3 +29,32 @@ export async function getTMDBDetails(id: number, type: "movie" | "tv"): Promise<
     throw error
   }
 }
+
+export async function getTrending(): Promise<TMDBSearchResult[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}?action=trending`)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+    const data = await response.json()
+    return data as TMDBSearchResult[]
+  } catch (error) {
+    console.error("Error getting trending:", error)
+    throw error
+  }
+}
+
+export async function getTopRated(type: "movie" | "tv"): Promise<TMDBSearchResult[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}?action=top_rated&type=${type}`)
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status} ${response.statusText}`)
+    }
+    const data = await response.json()
+    return data as TMDBSearchResult[]
+  } catch (error) {
+    console.error("Error getting top rated:", error)
+    throw error
+  }
+}
+
